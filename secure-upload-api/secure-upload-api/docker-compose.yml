@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  clamav:
+    image: clamav/clamav:stable
+    container_name: clamav
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_db:/var/lib/clamav
+    environment:
+      - CLAMAV_NO_FRESHCLAMD=false
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  api:
+    build: .
+    container_name: secure-upload-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./storage:/app/storage
+    environment:
+      - CLAMAV_HOST=clamav
+      - CLAMAV_PORT=3310
+      - STORAGE_PATH=/app/storage
+      - MAX_FILE_SIZE_MB=50
+      # Set a strong key in production!
+      - ENCRYPTION_KEY=change-me-to-a-strong-secret-key-in-production
+      - DEBUG=false
+    depends_on:
+      clamav:
+        condition: service_healthy
+
+volumes:
+  clamav_db:

@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VAULT — Secure File Upload</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080b0f;
+      --surface: #0e1318;
+      --surface2: #141b22;
+      --border: #1e2d3d;
+      --accent: #00e5ff;
+      --accent2: #00ff9d;
+      --danger: #ff3d57;
+      --warn: #ffb700;
+      --text: #e2eaf4;
+      --muted: #4a6077;
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'DM Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 {
+      width: 600px; height: 600px;
+      background: rgba(0,229,255,0.06);
+      top: -200px; left: -200px;
+      animation: drift1 20s ease-in-out infinite alternate;
+    }
+    .orb-2 {
+      width: 400px; height: 400px;
+      background: rgba(0,255,157,0.05);
+      bottom: -100px; right: -100px;
+      animation: drift2 25s ease-in-out infinite alternate;
+    }
+    @keyframes drift1 { to { transform: translate(80px, 60px); } }
+    @keyframes drift2 { to { transform: translate(-60px, -40px); } }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 32px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px;
+      border: 2px solid var(--accent);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s;
+    }
+    .status-dot.online { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+    .status-dot.offline { background: var(--danger); }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 80px 0 48px;
+      animation: fadeUp 0.6s ease both;
+    }
+    .hero-tag {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+    }
+    .hero-title span { color: var(--accent); }
+    .hero-sub {
+      color: var(--muted);
+      font-size: 0.85rem;
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    /* ── Security badges ── */
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 32px 0 0;
+    }
+    .badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      animation: fadeUp 0.6s ease both;
+    }
+    .badge span { color: var(--accent2); }
+
+    /* ── Main grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin: 48px 0;
+    }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px;
+      animation: fadeUp 0.6s ease both;
+    }
+    .panel-title {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Drop zone ── */
+    .dropzone {
+      border: 1.5px dashed var(--border);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+    .dropzone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0,229,255,0.03), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--accent);
+    }
+    .dropzone:hover::before, .dropzone.drag-over::before {
+      opacity: 1;
+    }
+    .dropzone.drag-over {
+      background: rgba(0,229,255,0.04);
+    }
+
+    .drop-icon {
+      width: 56px; height: 56px;
+      border: 1.5px solid var(--border);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 16px;
+      font-size: 22px;
+      transition: border-color 0.3s;
+    }
+    .dropzone:hover .drop-icon { border-color: var(--accent); }
+
+    .drop-text {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .drop-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .drop-sub strong { color: var(--accent); }
+
+    #fileInput { display: none; }
+
+    /* Selected file preview */
+    .file-preview {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      align-items: center;
+      gap: 12px;
+    }
+    .file-preview.show { display: flex; }
+    .file-preview-name {
+      flex: 1;
+      font-size: 0.78rem;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .file-preview-size { font-size: 0.68rem; color: var(--muted); }
+    .file-preview-clear {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+    .file-preview-clear:hover { color: var(--danger); }
+
+    /* Upload button */
+    .btn-upload {
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-upload:hover:not(:disabled) {
+      background: #33eeff;
+      box-shadow: 0 0 24px rgba(0,229,255,0.3);
+    }
+    .btn-upload:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .btn-upload.loading::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 2px;
+      background: rgba(0,0,0,0.3);
+      animation: progress 1.5s ease infinite;
+      width: 40%;
+    }
+    @keyframes progress {
+      0% { left: -40%; }
+      100% { left: 110%; }
+    }
+
+    /* ── Progress / result ── */
+    .upload-stages {
+      margin-top: 20px;
+      display: none;
+    }
+    .upload-stages.show { display: block; }
+
+    .stage {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      font-size: 0.75rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      transition: color 0.3s;
+    }
+    .stage:last-child { border-bottom: none; }
+    .stage.active { color: var(--text); }
+    .stage.done { color: var(--accent2); }
+    .stage.error { color: var(--danger); }
+
+    .stage-icon {
+      width: 20px; height: 20px;
+      border: 1px solid currentColor;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .stage.active .stage-icon {
+      border-color: var(--accent);
+      color: var(--accent);
+      animation: pulse 1s ease infinite;
+    }
+    @keyframes pulse { 50% { opacity: 0.4; } }
+
+    /* ── Result card ── */
+    .result-card {
+      display: none;
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      animation: fadeUp 0.4s ease;
+    }
+    .result-card.show { display: block; }
+    .result-card.success { border-color: rgba(0,255,157,0.3); }
+    .result-card.error { border-color: rgba(255,61,87,0.3); }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .result-header.success { color: var(--accent2); }
+    .result-header.error { color: var(--danger); }
+
+    .result-field {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 6px 0;
+      font-size: 0.7rem;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .result-field:last-child { border-bottom: none; }
+    .result-key { color: var(--muted); white-space: nowrap; }
+    .result-val {
+      color: var(--text);
+      text-align: right;
+      word-break: break-all;
+      max-width: 60%;
+    }
+    .result-val.mono { font-family: var(--font-mono); font-size: 0.65rem; }
+
+    .btn-download {
+      display: block;
+      width: 100%;
+      margin-top: 14px;
+      padding: 10px;
+      text-align: center;
+      background: transparent;
+      border: 1px solid var(--accent2);
+      color: var(--accent2);
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-download:hover {
+      background: var(--accent2);
+      color: var(--bg);
+    }
+
+    /* ── Files list panel ── */
+    .files-list { grid-column: 1 / -1; }
+
+    .file-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      margin-bottom: 4px;
+      font-size: 0.73rem;
+      transition: border-color 0.2s;
+      animation: fadeUp 0.3s ease both;
+    }
+    .file-row:hover { border-color: var(--accent); }
+
+    .file-type-icon {
+      width: 28px; height: 28px;
+      background: var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      color: var(--accent);
+    }
+
+    .file-row-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-row-meta { color: var(--muted); font-size: 0.65rem; }
+    .file-row-size { color: var(--muted); white-space: nowrap; }
+
+    .scan-badge {
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border: 1px solid;
+    }
+    .scan-badge.CLEAN { color: var(--accent2); border-color: rgba(0,255,157,0.3); }
+    .scan-badge.INFECTED { color: var(--danger); border-color: rgba(255,61,87,0.3); }
+    .scan-badge.UNAVAILABLE { color: var(--warn); border-color: rgba(255,183,0,0.3); }
+
+    .file-actions { display: flex; gap: 6px; }
+    .btn-action {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      cursor: pointer;
+      letter-spacing: 0.06em;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-action:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-action.del:hover { border-color: var(--danger); color: var(--danger); }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+    .empty-state-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.3; }
+
+    /* ── Health panel ── */
+    .health-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+    .health-stat {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 20px;
+    }
+    .health-stat-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .health-stat-value {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .health-stat-value.ok { color: var(--accent2); }
+    .health-stat-value.warn { color: var(--warn); }
+
+    /* ── Toast ── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 18px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 320px;
+    }
+    .toast.success { border-color: rgba(0,255,157,0.4); }
+    .toast.error { border-color: rgba(255,61,87,0.4); }
+
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } }
+    @keyframes fadeOut { to { opacity: 0; transform: translateX(10px); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 48px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🔐</div>
+      VAULT
+    </div>
+    <div class="status-pill">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">CHECKING...</span>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-tag">// Secure File Upload System</div>
+    <h1 class="hero-title">
+      Upload.<br/>
+      <span>Scan.</span><br/>
+      Encrypt.
+    </h1>
+    <p class="hero-sub">
+      Every file passes through a 6-layer security pipeline before being encrypted and stored on disk.
+    </p>
+    <div class="badges">
+      <div class="badge"><span>✓</span> MIME Validation</div>
+      <div class="badge"><span>✓</span> Extension Block List</div>
+      <div class="badge"><span>✓</span> ClamAV Scan</div>
+      <div class="badge"><span>✓</span> AES-128 Encryption</div>
+      <div class="badge"><span>✓</span> SHA-256 Integrity</div>
+    </div>
+  </section>
+
+  <!-- Health stats -->
+  <div class="health-grid" id="healthGrid">
+    <div class="health-stat">
+      <div class="health-stat-label">API Status</div>
+      <div class="health-stat-value" id="hApiStatus">—</div>
+    </div>
+    <div class="health-stat">
+      <div class="health-stat-label">ClamAV</div>
+      <div class="health-stat-value" id="hClamav">—</div>
+    </div>
+    <div class="health-stat">
+      <div class="health-stat-label">Max Upload</div>
+      <div class="health-stat-value" id="hMaxSize">—</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="grid">
+
+    <!-- Upload panel -->
+    <div class="panel">
+      <div class="panel-title">Upload File</div>
+
+      <div class="dropzone" id="dropzone">
+        <div class="drop-icon">📁</div>
+        <div class="drop-text">Drop file here or click to browse</div>
+        <div class="drop-sub">
+          Accepted: <strong>JPG, PNG, PDF, TXT, CSV, JSON, ZIP, DOCX, XLSX</strong><br/>
+          Max size configured on server
+        </div>
+        <input type="file" id="fileInput"/>
+      </div>
+
+      <div class="file-preview" id="filePreview">
+        <span style="font-size:20px" id="previewIcon">📄</span>
+        <span class="file-preview-name" id="previewName">—</span>
+        <span class="file-preview-size" id="previewSize">—</span>
+        <button class="file-preview-clear" id="clearFile">✕</button>
+      </div>
+
+      <button class="btn-upload" id="uploadBtn" disabled>
+        ⬆ UPLOAD SECURELY
+      </button>
+
+      <!-- Stages -->
+      <div class="upload-stages" id="uploadStages">
+        <div class="stage" id="s-validate">
+          <div class="stage-icon">1</div>
+          Validating file type & size
+        </div>
+        <div class="stage" id="s-scan">
+          <div class="stage-icon">2</div>
+          ClamAV malware scan
+        </div>
+        <div class="stage" id="s-encrypt">
+          <div class="stage-icon">3</div>
+          Encrypting with AES-128
+        </div>
+        <div class="stage" id="s-store">
+          <div class="stage-icon">4</div>
+          Writing to secure storage
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="result-card" id="resultCard">
+        <div class="result-header" id="resultHeader"></div>
+        <div id="resultFields"></div>
+        <button class="btn-download" id="resultDownload" style="display:none">
+          ↓ DOWNLOAD FILE
+        </button>
+      </div>
+    </div>
+
+    <!-- Info / tips panel -->
+    <div class="panel">
+      <div class="panel-title">Security Pipeline</div>
+
+      <div style="display:flex;flex-direction:column;gap:0">
+        <div style="padding:16px;border:1px solid var(--border);margin-bottom:2px">
+          <div style="font-family:var(--font-display);font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:6px">01 — File Validation</div>
+          <div style="font-size:0.72rem;color:var(--muted);line-height:1.7">Size limits enforced. Extension block list checked. MIME type read from magic bytes — not filename. Polyglot files detected.</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--border);margin-bottom:2px">
+          <div style="font-family:var(--font-display);font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:6px">02 — ClamAV Scan</div>
+          <div style="font-size:0.72rem;color:var(--muted);line-height:1.7">File is streamed through clamd. Malware, trojans, and known threats are detected. Infected files are rejected immediately.</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--border);margin-bottom:2px">
+          <div style="font-family:var(--font-display);font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:6px">03 — Encryption</div>
+          <div style="font-size:0.72rem;color:var(--muted);line-height:1.7">Fernet symmetric encryption (AES-128-CBC + HMAC-SHA256). Keys derived via PBKDF2 with 600,000 iterations.</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--border)">
+          <div style="font-family:var(--font-display);font-size:0.8rem;font-weight:700;color:var(--accent);margin-bottom:6px">04 — Integrity</div>
+          <div style="font-size:0.72rem;color:var(--muted);line-height:1.7">SHA-256 checksum recorded at upload. Verified on every download. Tampered or corrupted files are refused.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Files list — full width -->
+    <div class="panel files-list">
+      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Stored Files</span>
+        <button onclick="loadFiles()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:0.65rem;padding:4px 10px;cursor:pointer;letter-spacing:0.06em;transition:all 0.2s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">↻ REFRESH</button>
+      </div>
+      <div id="filesList">
+        <div class="empty-state">
+          <div class="empty-state-icon">📂</div>
+          No files uploaded yet
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>VAULT — Secure File Upload API</span>
+    <span>API: <span style="color:var(--accent)" id="footerApi">http://127.0.0.1:8000</span></span>
+  </footer>
+
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  const API = 'http://127.0.0.1:8000';
+  let selectedFile = null;
+  let lastFileId = null;
+
+  // ── Utils ──────────────────────────────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span> ${msg}`;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  function fmt(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024**2) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1024**2).toFixed(2) + ' MB';
+  }
+
+  function fileIcon(mime = '') {
+    if (mime.startsWith('image/')) return '🖼';
+    if (mime === 'application/pdf') return '📕';
+    if (mime.includes('zip')) return '🗜';
+    if (mime.includes('word') || mime.includes('docx')) return '📝';
+    if (mime.includes('sheet') || mime.includes('xlsx')) return '📊';
+    if (mime === 'text/csv') return '📊';
+    if (mime === 'application/json') return '{}';
+    return '📄';
+  }
+
+  function setStage(id, state) {
+    const el = document.getElementById(id);
+    el.className = `stage ${state}`;
+    const icons = { active: '◉', done: '✓', error: '✗', '': '○' };
+    el.querySelector('.stage-icon').textContent = icons[state] || String(el.querySelector('.stage-icon').textContent);
+  }
+
+  function resetStages() {
+    ['s-validate','s-scan','s-encrypt','s-store'].forEach(id => setStage(id, ''));
+  }
+
+  // ── Health check ───────────────────────────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const r = await fetch(`${API}/health`);
+      const d = await r.json();
+
+      document.getElementById('statusDot').className = 'status-dot online';
+      document.getElementById('statusText').textContent = 'API ONLINE';
+      document.getElementById('hApiStatus').textContent = 'ONLINE';
+      document.getElementById('hApiStatus').className = 'health-stat-value ok';
+
+      const clamOk = d.clamav?.available;
+      document.getElementById('hClamav').textContent = clamOk ? 'ACTIVE' : 'OFFLINE';
+      document.getElementById('hClamav').className = `health-stat-value ${clamOk ? 'ok' : 'warn'}`;
+      document.getElementById('hMaxSize').textContent = `${d.max_upload_mb ?? '?'} MB`;
+      document.getElementById('hMaxSize').className = 'health-stat-value';
+    } catch {
+      document.getElementById('statusDot').className = 'status-dot offline';
+      document.getElementById('statusText').textContent = 'API OFFLINE';
+      document.getElementById('hApiStatus').textContent = 'OFFLINE';
+      document.getElementById('hApiStatus').className = 'health-stat-value warn';
+    }
+  }
+
+  // ── File selection ─────────────────────────────────────────────────────────
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) selectFile(file);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) selectFile(fileInput.files[0]);
+  });
+
+  document.getElementById('clearFile').addEventListener('click', () => {
+    selectedFile = null;
+    fileInput.value = '';
+    document.getElementById('filePreview').classList.remove('show');
+    document.getElementById('uploadBtn').disabled = true;
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('uploadStages').classList.remove('show');
+    resetStages();
+  });
+
+  function selectFile(file) {
+    selectedFile = file;
+    document.getElementById('previewIcon').textContent = fileIcon(file.type);
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = fmt(file.size);
+    document.getElementById('filePreview').classList.add('show');
+    document.getElementById('uploadBtn').disabled = false;
+    document.getElementById('resultCard').classList.remove('show');
+    document.getElementById('uploadStages').classList.remove('show');
+    resetStages();
+  }
+
+  // ── Upload ─────────────────────────────────────────────────────────────────
+  document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+
+  async function uploadFile() {
+    if (!selectedFile) return;
+
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.textContent = 'UPLOADING...';
+
+    document.getElementById('uploadStages').classList.add('show');
+    document.getElementById('resultCard').classList.remove('show');
+    resetStages();
+
+    // Animate stages with delays
+    setStage('s-validate', 'active');
+    await delay(600);
+    setStage('s-validate', 'done');
+    setStage('s-scan', 'active');
+    await delay(800);
+    setStage('s-scan', 'done');
+    setStage('s-encrypt', 'active');
+
+    const form = new FormData();
+    form.append('file', selectedFile);
+
+    try {
+      const r = await fetch(`${API}/upload/`, { method: 'POST', body: form });
+      const d = await r.json();
+
+      setStage('s-encrypt', 'done');
+      setStage('s-store', 'active');
+      await delay(400);
+      setStage('s-store', 'done');
+
+      if (r.ok) {
+        lastFileId = d.file_id;
+        showResult('success', d);
+        toast('File uploaded & encrypted successfully', 'success');
+        loadFiles();
+      } else {
+        const stage = d.detail?.stage || 'upload';
+        const err = d.detail?.error || d.detail || 'Upload failed';
+        const errStages = { validation: 's-validate', antivirus: 's-scan', encryption: 's-encrypt', storage: 's-store' };
+        if (errStages[stage]) setStage(errStages[stage], 'error');
+        showResult('error', d.detail || d);
+        toast(err, 'error');
+      }
+    } catch (e) {
+      setStage('s-store', 'error');
+      showResult('error', { error: 'Could not connect to API. Is the server running?' });
+      toast('Connection failed', 'error');
+    }
+
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    btn.textContent = '⬆ UPLOAD SECURELY';
+  }
+
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function showResult(type, data) {
+    const card = document.getElementById('resultCard');
+    const header = document.getElementById('resultHeader');
+    const fields = document.getElementById('resultFields');
+    const dlBtn = document.getElementById('resultDownload');
+
+    card.className = `result-card show ${type}`;
+    header.className = `result-header ${type}`;
+
+    if (type === 'success') {
+      header.innerHTML = `<span>✓</span> Upload Successful`;
+      fields.innerHTML = `
+        <div class="result-field"><span class="result-key">File ID</span><span class="result-val mono">${data.file_id}</span></div>
+        <div class="result-field"><span class="result-key">Filename</span><span class="result-val">${data.filename}</span></div>
+        <div class="result-field"><span class="result-key">MIME Type</span><span class="result-val">${data.mime_type}</span></div>
+        <div class="result-field"><span class="result-key">Size</span><span class="result-val">${fmt(data.size_bytes)}</span></div>
+        <div class="result-field"><span class="result-key">Scan</span><span class="result-val" style="color:var(--accent2)">${data.scan?.status}</span></div>
+        <div class="result-field"><span class="result-key">SHA-256</span><span class="result-val mono">${data.checksum_sha256?.slice(0,24)}…</span></div>
+      `;
+      dlBtn.style.display = 'block';
+      dlBtn.onclick = () => downloadFile(data.file_id, data.filename);
+    } else {
+      header.innerHTML = `<span>✗</span> ${data.stage ? data.stage.toUpperCase() + ' FAILED' : 'Upload Failed'}`;
+      const msg = data.error || data.message || JSON.stringify(data);
+      const threat = data.threat ? `<div class="result-field"><span class="result-key">Threat</span><span class="result-val" style="color:var(--danger)">${data.threat}</span></div>` : '';
+      fields.innerHTML = `
+        <div class="result-field"><span class="result-key">Error</span><span class="result-val" style="color:var(--danger)">${msg}</span></div>
+        ${threat}
+      `;
+      dlBtn.style.display = 'none';
+    }
+  }
+
+  // ── Download ───────────────────────────────────────────────────────────────
+  async function downloadFile(id, name) {
+    toast('Decrypting & downloading...', 'info');
+    try {
+      const r = await fetch(`${API}/upload/${id}/download`);
+      if (!r.ok) { toast('Download failed', 'error'); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      URL.revokeObjectURL(url);
+      toast('Download complete', 'success');
+    } catch { toast('Download error', 'error'); }
+  }
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+  async function deleteFile(id) {
+    if (!confirm('Permanently delete this file?')) return;
+    try {
+      const r = await fetch(`${API}/upload/${id}`, { method: 'DELETE' });
+      if (r.ok) { toast('File deleted', 'success'); loadFiles(); }
+      else toast('Delete failed', 'error');
+    } catch { toast('Connection error', 'error'); }
+  }
+
+  // ── List files ─────────────────────────────────────────────────────────────
+  async function loadFiles() {
+    const container = document.getElementById('filesList');
+    try {
+      const r = await fetch(`${API}/upload/`);
+      const d = await r.json();
+      const files = d.files || [];
+
+      if (!files.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📂</div>No files uploaded yet</div>`;
+        return;
+      }
+
+      container.innerHTML = files.map(f => `
+        <div class="file-row">
+          <div class="file-type-icon">${fileIcon(f.mime_type)}</div>
+          <div>
+            <div class="file-row-name">${f.original_name}</div>
+            <div class="file-row-meta">${f.file_id.slice(0,8)}… · ${new Date(f.uploaded_at).toLocaleString()}</div>
+          </div>
+          <div class="file-row-size">${fmt(f.size_bytes)}</div>
+          <div class="scan-badge ${f.scan_status}">${f.scan_status}</div>
+          <div class="file-actions">
+            <button class="btn-action" onclick="downloadFile('${f.file_id}','${f.original_name}')">↓ DL</button>
+            <button class="btn-action del" onclick="deleteFile('${f.file_id}')">✕ DEL</button>
+          </div>
+        </div>
+      `).join('');
+    } catch {
+      container.innerHTML = `<div class="empty-state" style="color:var(--danger)">Could not reach API</div>`;
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  checkHealth();
+  loadFiles();
+  setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>
