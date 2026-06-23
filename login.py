@@ -1,5 +1,4 @@
 # login.py
-
 password = "admin123"
 
 def login(user_password):
