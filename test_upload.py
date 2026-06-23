@@ -3,6 +3,7 @@ Tests for the Secure File Upload API.
 Run with: pytest tests/ -v
 """
 import io
+import numpy
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
