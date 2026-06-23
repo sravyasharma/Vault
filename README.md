@@ -1,4 +1,4 @@
-# 🔐 Secure File Upload API
+# 🔐 Secure File Upload API #
 
 A production-grade file upload service with multi-layer security built on **FastAPI**.
 
