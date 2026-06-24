@@ -5,7 +5,7 @@ A production-grade file upload service with multi-layer security built on **Fast
 ## Security Architecture
 
 ```
-##Upload Request##
+###Upload Request###
      │
      ▼
 ┌─────────────────────────┐
