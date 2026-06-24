@@ -5,7 +5,7 @@ from pydantic import Field
 
 
 class Settings(BaseSettings):
-    # App
+    # Apps
     APP_NAME: str = "Secure File Upload API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
